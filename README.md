@@ -23,6 +23,9 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 - `ADMIN_EMAIL`：后台登录邮箱（默认 `admin@example.com`）
 - `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123`）
 - `STORE_PATH`：文件存储模式下的数据文件路径（默认 `admin/data/store.json`）
+- `CLOUD_ENV_ID`：云开发环境 ID（用于后台上传图片走“云托管对象存储/云存储 SDK”时需要；建议设置为你的环境 ID）
+- `CLOUD_UPLOAD_TIMEOUT_MS`：云存储上传超时（毫秒，默认 15000）
+- `CLOUD_UPLOAD_RETURN_TEMP_URL`：是否在上传后生成临时预览链接（`1` 开启；默认不开启，避免超时）
 
 MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 - `MYSQL_HOST`
@@ -32,7 +35,7 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 - `MYSQL_DATABASE`
 - `MYSQL_POOL_SIZE`（可选）
 
-对象存储 COS（用于后台上传图片，配置后管理页可直接上传）：
+对象存储 / 云存储（用于后台上传图片）：
 - `COS_BUCKET`
 - `COS_REGION`
 - `COS_PUBLIC_BASE_URL`（可选：自定义公网访问前缀，例如 CDN 域名或存储桶自定义域名）
@@ -64,9 +67,8 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 - `GET /api/admin/me`
 - `GET /api/admin/stats`
 - `GET/PUT /api/admin/settings`
-- `GET/POST/PUT/DELETE /api/admin/categories`
 - `GET /api/admin/leads`
-- `GET/POST/PUT/DELETE /api/admin/products|cases|designs|posts|store-cards`
+- `GET/POST/PUT/DELETE /api/admin/home-banners|home-navs|home-services|home-advantages|cases|designers|about-infos|about-history`
 - `POST /api/admin/upload`：上传图片到对象存储（form-data：`file`）
 
 ## 微信云托管部署提示
