@@ -18,7 +18,7 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 
 ## 环境变量
 
-- `PORT`：监听端口（默认 3000）
+- `PORT`：监听端口（本地可用 3000；云托管建议与服务端口一致，通常为 80）
 - `ADMIN_TOKEN`：管理接口 Token（请求头 `x-admin-token`），不配置时默认 `dev-admin-token`
 - `ADMIN_USERNAME`：后台登录用户名（默认 `admin`）
 - `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123456`）
