@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const { adminAuth, getAdminToken } = require('./lib/adminAuth');
+const { adminAuth, getAdminToken, verifyAdminLogin, getAdminUsername } = require('./lib/adminAuth');
 const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
@@ -21,6 +21,15 @@ app.use(express.json({ limit: '1mb' }));
 
 app.get('/healthz', (req, res) => {
   res.json({ ok: true });
+});
+
+app.post('/api/admin/login', async (req, res) => {
+  const body = req.body || {};
+  const username = String(body.username || '').trim();
+  const password = String(body.password || '');
+  const r = verifyAdminLogin(username, password);
+  if (!r.ok) return res.status(401).json({ error: r.reason || 'invalid_credentials' });
+  res.json({ ok: true, token: getAdminToken() });
 });
 
 function pickHotCases(store) {
@@ -175,6 +184,7 @@ app.get('/api/admin/meta', adminAuth, async (req, res) => {
     mysqlConfigured: hasMySQLConfig(),
     cosConfigured: hasCOSConfig(),
     cosCredentialSource: cosCreds ? cosCreds.source : null,
+    adminUsername: getAdminUsername(),
     storePath: hasMySQLConfig() ? null : require('./lib/store').STORE_PATH
   });
 });

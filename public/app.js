@@ -1,6 +1,10 @@
 const els = {
   baseUrl: document.getElementById('baseUrl'),
   useCurrent: document.getElementById('useCurrent'),
+  username: document.getElementById('username'),
+  password: document.getElementById('password'),
+  login: document.getElementById('login'),
+  logout: document.getElementById('logout'),
   token: document.getElementById('token'),
   saveToken: document.getElementById('saveToken'),
   uploadFile: document.getElementById('uploadFile'),
@@ -69,6 +73,41 @@ async function apiFetch(p, options) {
   return json;
 }
 
+async function login() {
+  const username = String(els.username.value || '').trim();
+  const password = String(els.password.value || '');
+  if (!username) {
+    setStatus('请输入用户名');
+    return;
+  }
+  if (!password) {
+    setStatus('请输入密码');
+    return;
+  }
+
+  setStatus('登录中...');
+  try {
+    const data = await apiFetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    els.token.value = data.token || '';
+    savePrefs();
+    els.password.value = '';
+    setStatus('登录成功');
+    await loadSection();
+  } catch (e) {
+    setStatus('登录失败', e);
+  }
+}
+
+function logout() {
+  els.token.value = '';
+  savePrefs();
+  setStatus('已退出');
+}
+
 async function uploadImage() {
   const file = els.uploadFile && els.uploadFile.files && els.uploadFile.files[0];
   if (!file) {
@@ -121,13 +160,16 @@ async function copyUploadUrl() {
 function savePrefs() {
   localStorage.setItem('mowei_admin_baseUrl', String(els.baseUrl.value || ''));
   localStorage.setItem('mowei_admin_token', String(els.token.value || ''));
+  localStorage.setItem('mowei_admin_username', String(els.username.value || ''));
 }
 
 function loadPrefs() {
   const baseUrl = localStorage.getItem('mowei_admin_baseUrl');
   const token = localStorage.getItem('mowei_admin_token');
+  const username = localStorage.getItem('mowei_admin_username');
   els.baseUrl.value = baseUrl || window.location.origin;
   els.token.value = token || (window.__ADMIN_DEFAULT_TOKEN__ || '');
+  els.username.value = username || 'admin';
 }
 
 async function loadSection() {
@@ -190,6 +232,15 @@ els.useCurrent.addEventListener('click', () => {
   els.baseUrl.value = window.location.origin;
   savePrefs();
   setStatus('已设置为当前域名');
+});
+
+els.login.addEventListener('click', async () => {
+  savePrefs();
+  await login();
+});
+
+els.logout.addEventListener('click', () => {
+  logout();
 });
 
 els.saveToken.addEventListener('click', () => {

@@ -20,6 +20,8 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 
 - `PORT`：监听端口（默认 3000）
 - `ADMIN_TOKEN`：管理接口 Token（请求头 `x-admin-token`），不配置时默认 `dev-admin-token`
+- `ADMIN_USERNAME`：后台登录用户名（默认 `admin`）
+- `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123456`）
 - `STORE_PATH`：文件存储模式下的数据文件路径（默认 `admin/data/store.json`）
 
 MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
