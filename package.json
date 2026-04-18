@@ -9,6 +9,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.1",
     "cos-nodejs-sdk-v5": "^2.14.5",
     "express": "^4.19.2",
     "multer": "^2.0.0",

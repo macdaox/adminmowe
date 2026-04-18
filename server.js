@@ -6,6 +6,7 @@ const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
 const miniappAdmin = require('./lib/miniappAdmin');
+const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage } = require('./lib/cloudStorage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -289,6 +290,8 @@ app.get('/api/admin/meta', adminAuth, async (req, res) => {
     mysqlConfigured: hasMySQLConfig(),
     cosConfigured: hasCOSConfig(),
     cosCredentialSource: cosCreds ? cosCreds.source : null,
+    cloudStorageEnabled: hasCloudStorage(),
+    cloudEnvId: getCloudEnvId() || null,
     adminEmail: getAdminEmail(),
     storePath: hasMySQLConfig() ? null : require('./lib/store').STORE_PATH
   });
@@ -338,9 +341,17 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
   const mt = String(f.mimetype || '').toLowerCase();
   if (!mt.startsWith('image/')) return apiErr(res, 400, 'image_only');
   try {
+    if (hasCloudStorage()) {
+      const r = await uploadImageToCloudStorage({ buffer: f.buffer, filename: f.originalname, mimetype: f.mimetype });
+      apiOk(res, { key: r.key, cloudId: r.cloudId, url: r.tempUrl || '' });
+      return;
+    }
+
     const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname });
-    apiOk(res, { url: result.url, key: result.key });
+    apiOk(res, { url: result.url, key: result.key, cloudId: null });
   } catch (e) {
+    if (e && e.code === 'cloud_env_not_configured') return apiErr(res, 500, 'cloud_env_not_configured');
+    if (e && e.code === 'cloud_upload_failed') return apiErr(res, 500, 'cloud_upload_failed');
     if (e && e.code === 'cos_not_configured') return apiErr(res, 500, 'cos_not_configured');
     if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
     if (e && e.code === 'cos_upload_timeout') return apiErr(res, 504, 'cos_upload_timeout');
