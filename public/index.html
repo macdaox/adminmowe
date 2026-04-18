@@ -7,74 +7,103 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <div class="container">
-      <header class="header">
-        <div class="title">默维高颜整家定制 · 后台管理</div>
-        <div class="sub">用 JSON 方式管理小程序内容（轮播图、案例、设计师、关于、联系、预约）</div>
-      </header>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand">
+          <div class="brand-title">默维高颜整家定制</div>
+          <div class="brand-sub">后台管理</div>
+        </div>
+        <div class="topbar-actions">
+          <button id="toggleRaw" class="btn">高级：JSON</button>
+          <button id="saveSectionTop" class="btn primary">保存</button>
+        </div>
+      </div>
 
-      <section class="panel">
-        <div class="row">
-          <label class="label">后端地址</label>
-          <input id="baseUrl" class="input" placeholder="例如 https://xxx.ap-shanghai.app.tcloudbase.com" />
-          <button id="useCurrent" class="btn">用当前域名</button>
-        </div>
-        <div class="row">
-          <label class="label">账号</label>
-          <input id="username" class="input" placeholder="用户名" />
-          <label class="label">密码</label>
-          <input id="password" class="input" placeholder="密码" type="password" />
-          <button id="login" class="btn primary">登录</button>
-          <button id="logout" class="btn">退出</button>
-        </div>
-        <div class="row">
-          <label class="label">管理 Token</label>
-          <input id="token" class="input" placeholder="登录后自动填充，也可手动填写" />
-          <button id="saveToken" class="btn">保存</button>
-        </div>
-        <div class="row">
-          <label class="label">上传图片</label>
-          <input id="uploadFile" class="input" type="file" accept="image/*" />
-          <button id="uploadBtn" class="btn">上传</button>
-          <button id="copyUrl" class="btn">复制链接</button>
-        </div>
-        <div class="row">
-          <label class="label">图片链接</label>
-          <input id="uploadUrl" class="input" placeholder="上传后自动生成，可复制粘贴到 JSON 里" />
-        </div>
-        <div class="row">
-          <label class="label">内容模块</label>
-          <select id="section" class="input">
-            <option value="site">site（全局品牌信息）</option>
-            <option value="home">home（首页）</option>
-            <option value="cases">cases（案例）</option>
-            <option value="designers">designers（设计师）</option>
-            <option value="about">about（关于）</option>
-            <option value="contact">contact（联系）</option>
-            <option value="appointments">appointments（预约列表）</option>
-          </select>
-          <button id="load" class="btn primary">加载</button>
-          <button id="save" class="btn">保存</button>
-          <button id="reset" class="btn danger">恢复默认</button>
-        </div>
-      </section>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="side-title">内容模块</div>
+          <button class="side-item active" data-section="site">全局信息</button>
+          <button class="side-item" data-section="home">首页</button>
+          <button class="side-item" data-section="cases">案例</button>
+          <button class="side-item" data-section="designers">设计师</button>
+          <button class="side-item" data-section="about">关于</button>
+          <button class="side-item" data-section="contact">联系</button>
+          <button class="side-item" data-section="appointments">预约</button>
+        </aside>
 
-      <section class="panel">
-        <div class="row">
-          <label class="label">JSON</label>
-          <div class="help">
-            <div>提示：图片字段一般是 xxxUrl（后端存）或 image（小程序拿到）。建议填可访问的 https 图片地址。</div>
-          </div>
-        </div>
-        <textarea id="editor" class="editor" spellcheck="false"></textarea>
-      </section>
+        <main class="main">
+          <section class="card">
+            <div class="card-title">登录与配置</div>
+            <div class="grid">
+              <div class="field">
+                <div class="label">后端地址</div>
+                <div class="control">
+                  <input id="baseUrl" class="input" placeholder="例如 https://xxx.ap-shanghai.app.tcloudbase.com" />
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">快捷</div>
+                <div class="control">
+                  <button id="useCurrent" class="btn">用当前域名</button>
+                  <button id="refreshMeta" class="btn">检测连接</button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">用户名</div>
+                <div class="control">
+                  <input id="username" class="input" placeholder="用户名" />
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">密码</div>
+                <div class="control">
+                  <input id="password" class="input" placeholder="密码" type="password" />
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">登录</div>
+                <div class="control">
+                  <button id="login" class="btn primary">登录</button>
+                  <button id="logout" class="btn">退出</button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">Token</div>
+                <div class="control">
+                  <input id="token" class="input" placeholder="登录后自动填充，也可手动填写" />
+                  <button id="saveToken" class="btn">保存</button>
+                </div>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel">
-        <div class="row">
-          <label class="label">状态</label>
-          <pre id="status" class="status"></pre>
-        </div>
-      </section>
+          <section class="card">
+            <div class="card-head">
+              <div class="card-title" id="sectionTitle">全局信息</div>
+              <div class="card-actions">
+                <button id="reloadSection" class="btn">重新加载</button>
+                <button id="resetAll" class="btn danger">恢复默认</button>
+              </div>
+            </div>
+            <div id="sectionBody"></div>
+          </section>
+
+          <section class="card raw hidden" id="rawCard">
+            <div class="card-head">
+              <div class="card-title">高级：JSON</div>
+              <div class="card-actions">
+                <button id="applyRaw" class="btn primary">应用 JSON</button>
+              </div>
+            </div>
+            <textarea id="editor" class="editor" spellcheck="false"></textarea>
+          </section>
+
+          <section class="card">
+            <div class="card-title">状态</div>
+            <pre id="status" class="status"></pre>
+          </section>
+        </main>
+      </div>
     </div>
 
     <script src="/admin/config.js"></script>
