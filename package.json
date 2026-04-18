@@ -1,0 +1,17 @@
+{
+  "name": "mowei-admin-backend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "默维高颜整家定制 - 后端（微信云托管）",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cos-nodejs-sdk-v5": "^2.14.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "mysql2": "^3.11.5"
+  }
+}

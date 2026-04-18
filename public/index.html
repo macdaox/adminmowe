@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>默维高颜整家定制 · 后台管理</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="title">默维高颜整家定制 · 后台管理</div>
+        <div class="sub">用 JSON 方式管理小程序内容（轮播图、案例、设计师、关于、联系、预约）</div>
+      </header>
+
+      <section class="panel">
+        <div class="row">
+          <label class="label">后端地址</label>
+          <input id="baseUrl" class="input" placeholder="例如 https://xxx.ap-shanghai.app.tcloudbase.com" />
+          <button id="useCurrent" class="btn">用当前域名</button>
+        </div>
+        <div class="row">
+          <label class="label">管理 Token</label>
+          <input id="token" class="input" placeholder="x-admin-token" />
+          <button id="saveToken" class="btn">保存</button>
+        </div>
+        <div class="row">
+          <label class="label">上传图片</label>
+          <input id="uploadFile" class="input" type="file" accept="image/*" />
+          <button id="uploadBtn" class="btn">上传</button>
+          <button id="copyUrl" class="btn">复制链接</button>
+        </div>
+        <div class="row">
+          <label class="label">图片链接</label>
+          <input id="uploadUrl" class="input" placeholder="上传后自动生成，可复制粘贴到 JSON 里" />
+        </div>
+        <div class="row">
+          <label class="label">内容模块</label>
+          <select id="section" class="input">
+            <option value="site">site（全局品牌信息）</option>
+            <option value="home">home（首页）</option>
+            <option value="cases">cases（案例）</option>
+            <option value="designers">designers（设计师）</option>
+            <option value="about">about（关于）</option>
+            <option value="contact">contact（联系）</option>
+            <option value="appointments">appointments（预约列表）</option>
+          </select>
+          <button id="load" class="btn primary">加载</button>
+          <button id="save" class="btn">保存</button>
+          <button id="reset" class="btn danger">恢复默认</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <label class="label">JSON</label>
+          <div class="help">
+            <div>提示：图片字段一般是 xxxUrl（后端存）或 image（小程序拿到）。建议填可访问的 https 图片地址。</div>
+          </div>
+        </div>
+        <textarea id="editor" class="editor" spellcheck="false"></textarea>
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <label class="label">状态</label>
+          <pre id="status" class="status"></pre>
+        </div>
+      </section>
+    </div>
+
+    <script src="/admin/config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
