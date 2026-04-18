@@ -5,7 +5,7 @@ const { adminAuth, getAdminToken, getAdminEmail, verifyAdminLogin } = require('.
 const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
-const adminCms = require('./lib/adminCms');
+const miniappAdmin = require('./lib/miniappAdmin');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -47,7 +47,7 @@ app.get('/api/admin/me', adminAuth, async (req, res) => {
 
 app.get('/api/admin/stats', adminAuth, async (req, res) => {
   try {
-    const stats = await adminCms.getStats();
+    const stats = await miniappAdmin.getStats();
     apiOk(res, stats);
   } catch (e) {
     apiErr(res, 500, 'stats_failed');
@@ -56,7 +56,7 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
 
 app.get('/api/admin/settings', adminAuth, async (req, res) => {
   try {
-    const settings = await adminCms.getSettings();
+    const settings = await miniappAdmin.getMiniappSettings();
     apiOk(res, settings);
   } catch (e) {
     apiErr(res, 500, 'settings_failed');
@@ -65,92 +65,61 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
 
 app.put('/api/admin/settings', adminAuth, async (req, res) => {
   try {
-    const settings = await adminCms.updateSettings(req.body || {});
+    const settings = await miniappAdmin.updateMiniappSettings(req.body || {});
     apiOk(res, settings);
   } catch (e) {
     apiErr(res, 500, 'settings_failed');
   }
 });
 
-app.get('/api/admin/categories', adminAuth, async (req, res) => {
-  try {
-    const { q, limit, offset } = req.query || {};
-    const r = await adminCms.listCategories(q, limit, offset);
-    apiOk(res, r);
-  } catch (e) {
-    apiErr(res, 500, 'categories_failed');
-  }
-});
-
-app.post('/api/admin/categories', adminAuth, async (req, res) => {
-  try {
-    const item = await adminCms.createCategory(req.body || {});
-    apiOk(res, item);
-  } catch (e) {
-    apiErr(res, 400, e && e.code ? String(e.code) : 'create_failed');
-  }
-});
-
-app.put('/api/admin/categories/:id', adminAuth, async (req, res) => {
-  try {
-    const item = await adminCms.updateCategory(String(req.params.id || ''), req.body || {});
-    apiOk(res, item);
-  } catch (e) {
-    apiErr(res, e && e.code === 'not_found' ? 404 : 400, e && e.code ? String(e.code) : 'update_failed');
-  }
-});
-
-app.delete('/api/admin/categories/:id', adminAuth, async (req, res) => {
-  try {
-    await adminCms.deleteCategory(String(req.params.id || ''));
-    apiOk(res, {});
-  } catch (e) {
-    apiErr(res, 500, 'delete_failed');
-  }
-});
-
 app.get('/api/admin/leads', adminAuth, async (req, res) => {
   try {
     const { q, limit, offset } = req.query || {};
-    const r = await adminCms.listLeads(q, limit, offset);
+    const r = await miniappAdmin.listLeads(q, limit, offset);
     apiOk(res, r);
   } catch (e) {
     apiErr(res, 500, 'leads_failed');
   }
 });
 
-function handleContentEntity(entity) {
+function handleArrayEntity({ entity, sectionKey, arrayPath, qFields, idPrefix }) {
   app.get(`/api/admin/${entity}`, adminAuth, async (req, res) => {
     try {
       const { q, limit, offset } = req.query || {};
-      const r = await adminCms.listContent(entity, q, limit, offset);
+      const r = await miniappAdmin.listArray({ sectionKey, arrayPath, q, limit, offset, qFields, ensureIdPrefix: idPrefix });
       apiOk(res, r);
     } catch (e) {
-      apiErr(res, 400, e && e.code ? String(e.code) : 'list_failed');
+      apiErr(res, 500, 'list_failed');
     }
   });
 
   app.post(`/api/admin/${entity}`, adminAuth, async (req, res) => {
     try {
-      const item = await adminCms.createContent(entity, req.body || {});
+      const item = await miniappAdmin.createArrayItem({ sectionKey, arrayPath, payload: req.body || {}, idPrefix });
       apiOk(res, item);
     } catch (e) {
-      apiErr(res, 400, e && e.code ? String(e.code) : 'create_failed');
+      apiErr(res, 400, 'create_failed');
     }
   });
 
   app.put(`/api/admin/${entity}/:id`, adminAuth, async (req, res) => {
     try {
-      const item = await adminCms.updateContent(entity, String(req.params.id || ''), req.body || {});
+      const item = await miniappAdmin.updateArrayItem({
+        sectionKey,
+        arrayPath,
+        id: String(req.params.id || ''),
+        payload: req.body || {}
+      });
+      if (!item) return apiErr(res, 404, 'not_found');
       apiOk(res, item);
     } catch (e) {
-      apiErr(res, e && e.code === 'not_found' ? 404 : 400, e && e.code ? String(e.code) : 'update_failed');
+      apiErr(res, 400, 'update_failed');
     }
   });
 
   app.delete(`/api/admin/${entity}/:id`, adminAuth, async (req, res) => {
     try {
-      await adminCms.deleteContent(entity, String(req.params.id || ''));
+      await miniappAdmin.deleteArrayItem({ sectionKey, arrayPath, id: String(req.params.id || '') });
       apiOk(res, {});
     } catch (e) {
       apiErr(res, 500, 'delete_failed');
@@ -158,7 +127,16 @@ function handleContentEntity(entity) {
   });
 }
 
-['products', 'cases', 'designs', 'posts', 'store-cards'].forEach(handleContentEntity);
+[
+  { entity: 'home-banners', sectionKey: 'home', arrayPath: 'banners', qFields: ['id', 'title', 'desc'], idPrefix: 'b' },
+  { entity: 'home-navs', sectionKey: 'home', arrayPath: 'navs', qFields: ['id', 'type', 'name'], idPrefix: 'n' },
+  { entity: 'home-services', sectionKey: 'home', arrayPath: 'services', qFields: ['id', 'name', 'desc'], idPrefix: 's' },
+  { entity: 'home-advantages', sectionKey: 'home', arrayPath: 'advantages', qFields: ['id', 'title', 'desc'], idPrefix: 'a' },
+  { entity: 'cases', sectionKey: 'cases', arrayPath: 'items', qFields: ['id', 'title', 'style', 'area', 'room', 'desc'], idPrefix: 'c' },
+  { entity: 'designers', sectionKey: 'designers', arrayPath: 'items', qFields: ['id', 'name', 'level', 'desc'], idPrefix: 'd' },
+  { entity: 'about-infos', sectionKey: 'about', arrayPath: 'infos', qFields: ['title', 'desc', 'icon'], idPrefix: 'ai' },
+  { entity: 'about-history', sectionKey: 'about', arrayPath: 'history', qFields: ['year', 'event'], idPrefix: 'ah' }
+].forEach(handleArrayEntity);
 
 function pickHotCases(store) {
   const map = new Map((store.cases.items || []).map((c) => [c.id, c]));
