@@ -343,6 +343,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
   } catch (e) {
     if (e && e.code === 'cos_not_configured') return apiErr(res, 500, 'cos_not_configured');
     if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
+    if (e && e.code === 'cos_upload_timeout') return apiErr(res, 504, 'cos_upload_timeout');
     apiErr(res, 500, 'upload_failed');
   }
 });
