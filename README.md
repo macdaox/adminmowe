@@ -2,7 +2,7 @@
 
 本目录是小程序的后端服务，提供内容管理与公开 API：
 - 公开 API：小程序前端读取轮播图、案例、设计师、关于、联系等内容；提交预约表单
-- 管理 API + 管理页：在 `/admin/` 用 JSON 方式编辑内容（需要 Token）
+- 管理 API + 管理页：后台系统（网页）用于登录、上传图片、维护内容与线索
 
 ## 本地启动
 
@@ -13,15 +13,15 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 ```
 
 打开：
-- 管理页：http://localhost:3000/admin/
+- 管理页：http://localhost:3000/
 - 健康检查：http://localhost:3000/healthz
 
 ## 环境变量
 
 - `PORT`：监听端口（本地可用 3000；云托管建议与服务端口一致，通常为 80）
-- `ADMIN_TOKEN`：管理接口 Token（请求头 `x-admin-token`），不配置时默认 `dev-admin-token`
-- `ADMIN_USERNAME`：后台登录用户名（默认 `admin`）
-- `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123456`）
+- `ADMIN_TOKEN`：管理接口 Token（用于 Bearer Token 鉴权），不配置时默认 `dev-admin-token`
+- `ADMIN_EMAIL`：后台登录邮箱（默认 `admin@example.com`）
+- `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123`）
 - `STORE_PATH`：文件存储模式下的数据文件路径（默认 `admin/data/store.json`）
 
 MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
@@ -54,13 +54,20 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 
 ## 管理（后台编辑内容）
 
-管理页：`/admin/`（内部会调用管理 API，需要 Token）
+管理页：`/`（后台系统 SPA）
 
-管理 API（需要请求头 `x-admin-token`）：
-- `GET /api/admin/section/:key`：读取模块（key 可用：`site|home|cases|designers|about|contact|appointments`）
-- `PUT /api/admin/section/:key`：保存模块（appointments 通过预约提交写入，不建议手改）
-- `POST /api/admin/reset`：全量恢复默认数据
-- `POST /api/admin/upload`：上传图片到对象存储（form-data：`file`，返回 `url`）
+鉴权方式：
+- 登录：`POST /api/admin/login`（body：`{ email, password }`）
+- 后续请求：`Authorization: Bearer <token>`（token 为登录返回值）
+
+后台常用接口（均为 Bearer Token 鉴权）：
+- `GET /api/admin/me`
+- `GET /api/admin/stats`
+- `GET/PUT /api/admin/settings`
+- `GET/POST/PUT/DELETE /api/admin/categories`
+- `GET /api/admin/leads`
+- `GET/POST/PUT/DELETE /api/admin/products|cases|designs|posts|store-cards`
+- `POST /api/admin/upload`：上传图片到对象存储（form-data：`file`）
 
 ## 微信云托管部署提示
 

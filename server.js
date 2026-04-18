@@ -1,17 +1,18 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const { adminAuth, getAdminToken, verifyAdminLogin, getAdminUsername } = require('./lib/adminAuth');
+const { adminAuth, getAdminToken, getAdminEmail, verifyAdminLogin } = require('./lib/adminAuth');
 const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
+const adminCms = require('./lib/adminCms');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-token');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
@@ -23,14 +24,141 @@ app.get('/healthz', (req, res) => {
   res.json({ ok: true });
 });
 
+function apiOk(res, data) {
+  res.json({ ok: true, data });
+}
+
+function apiErr(res, status, message) {
+  res.status(status).json({ ok: false, message: message || 'Request failed' });
+}
+
 app.post('/api/admin/login', async (req, res) => {
   const body = req.body || {};
-  const username = String(body.username || '').trim();
+  const email = String(body.email || body.username || '').trim();
   const password = String(body.password || '');
-  const r = verifyAdminLogin(username, password);
-  if (!r.ok) return res.status(401).json({ error: r.reason || 'invalid_credentials' });
-  res.json({ ok: true, token: getAdminToken() });
+  const r = verifyAdminLogin(email, password);
+  if (!r.ok) return apiErr(res, 401, r.reason || 'invalid_credentials');
+  apiOk(res, { token: getAdminToken(), email: getAdminEmail() });
 });
+
+app.get('/api/admin/me', adminAuth, async (req, res) => {
+  apiOk(res, { email: getAdminEmail() });
+});
+
+app.get('/api/admin/stats', adminAuth, async (req, res) => {
+  try {
+    const stats = await adminCms.getStats();
+    apiOk(res, stats);
+  } catch (e) {
+    apiErr(res, 500, 'stats_failed');
+  }
+});
+
+app.get('/api/admin/settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await adminCms.getSettings();
+    apiOk(res, settings);
+  } catch (e) {
+    apiErr(res, 500, 'settings_failed');
+  }
+});
+
+app.put('/api/admin/settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await adminCms.updateSettings(req.body || {});
+    apiOk(res, settings);
+  } catch (e) {
+    apiErr(res, 500, 'settings_failed');
+  }
+});
+
+app.get('/api/admin/categories', adminAuth, async (req, res) => {
+  try {
+    const { q, limit, offset } = req.query || {};
+    const r = await adminCms.listCategories(q, limit, offset);
+    apiOk(res, r);
+  } catch (e) {
+    apiErr(res, 500, 'categories_failed');
+  }
+});
+
+app.post('/api/admin/categories', adminAuth, async (req, res) => {
+  try {
+    const item = await adminCms.createCategory(req.body || {});
+    apiOk(res, item);
+  } catch (e) {
+    apiErr(res, 400, e && e.code ? String(e.code) : 'create_failed');
+  }
+});
+
+app.put('/api/admin/categories/:id', adminAuth, async (req, res) => {
+  try {
+    const item = await adminCms.updateCategory(String(req.params.id || ''), req.body || {});
+    apiOk(res, item);
+  } catch (e) {
+    apiErr(res, e && e.code === 'not_found' ? 404 : 400, e && e.code ? String(e.code) : 'update_failed');
+  }
+});
+
+app.delete('/api/admin/categories/:id', adminAuth, async (req, res) => {
+  try {
+    await adminCms.deleteCategory(String(req.params.id || ''));
+    apiOk(res, {});
+  } catch (e) {
+    apiErr(res, 500, 'delete_failed');
+  }
+});
+
+app.get('/api/admin/leads', adminAuth, async (req, res) => {
+  try {
+    const { q, limit, offset } = req.query || {};
+    const r = await adminCms.listLeads(q, limit, offset);
+    apiOk(res, r);
+  } catch (e) {
+    apiErr(res, 500, 'leads_failed');
+  }
+});
+
+function handleContentEntity(entity) {
+  app.get(`/api/admin/${entity}`, adminAuth, async (req, res) => {
+    try {
+      const { q, limit, offset } = req.query || {};
+      const r = await adminCms.listContent(entity, q, limit, offset);
+      apiOk(res, r);
+    } catch (e) {
+      apiErr(res, 400, e && e.code ? String(e.code) : 'list_failed');
+    }
+  });
+
+  app.post(`/api/admin/${entity}`, adminAuth, async (req, res) => {
+    try {
+      const item = await adminCms.createContent(entity, req.body || {});
+      apiOk(res, item);
+    } catch (e) {
+      apiErr(res, 400, e && e.code ? String(e.code) : 'create_failed');
+    }
+  });
+
+  app.put(`/api/admin/${entity}/:id`, adminAuth, async (req, res) => {
+    try {
+      const item = await adminCms.updateContent(entity, String(req.params.id || ''), req.body || {});
+      apiOk(res, item);
+    } catch (e) {
+      apiErr(res, e && e.code === 'not_found' ? 404 : 400, e && e.code ? String(e.code) : 'update_failed');
+    }
+  });
+
+  app.delete(`/api/admin/${entity}/:id`, adminAuth, async (req, res) => {
+    try {
+      await adminCms.deleteContent(entity, String(req.params.id || ''));
+      apiOk(res, {});
+    } catch (e) {
+      apiErr(res, 500, 'delete_failed');
+    }
+  });
+}
+
+['products', 'cases', 'designs', 'posts', 'store-cards'].forEach(handleContentEntity);
 
 function pickHotCases(store) {
   const map = new Map((store.cases.items || []).map((c) => [c.id, c]));
@@ -178,13 +306,12 @@ app.post('/api/public/appointments', async (req, res) => {
 app.get('/api/admin/meta', adminAuth, async (req, res) => {
   await contentStore.init();
   const cosCreds = hasCOSConfig() ? await getCredentials() : null;
-  res.json({
-    ok: true,
+  apiOk(res, {
     mode: hasMySQLConfig() ? 'mysql' : 'file',
     mysqlConfigured: hasMySQLConfig(),
     cosConfigured: hasCOSConfig(),
     cosCredentialSource: cosCreds ? cosCreds.source : null,
-    adminUsername: getAdminUsername(),
+    adminEmail: getAdminEmail(),
     storePath: hasMySQLConfig() ? null : require('./lib/store').STORE_PATH
   });
 });
@@ -229,30 +356,24 @@ app.post('/api/admin/reset', adminAuth, async (req, res) => {
 
 app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res) => {
   const f = req.file;
-  if (!f) return res.status(400).json({ error: 'file_required' });
+  if (!f) return apiErr(res, 400, 'file_required');
   const mt = String(f.mimetype || '').toLowerCase();
-  if (!mt.startsWith('image/')) return res.status(400).json({ error: 'image_only' });
+  if (!mt.startsWith('image/')) return apiErr(res, 400, 'image_only');
   try {
     const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname });
-    res.json({ ok: true, url: result.url, key: result.key });
+    apiOk(res, { url: result.url, key: result.key });
   } catch (e) {
-    if (e && e.code === 'cos_not_configured') return res.status(500).json({ error: 'cos_not_configured' });
-    if (e && e.code === 'cos_credentials_unavailable') return res.status(500).json({ error: 'cos_credentials_unavailable' });
-    res.status(500).json({ error: 'upload_failed' });
+    if (e && e.code === 'cos_not_configured') return apiErr(res, 500, 'cos_not_configured');
+    if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
+    apiErr(res, 500, 'upload_failed');
   }
 });
 
-app.get('/admin/config.js', (req, res) => {
-  res.type('application/javascript');
-  res.send(
-    `window.__ADMIN_DEFAULT_TOKEN__ = ${JSON.stringify(getAdminToken())};\n`
-  );
-});
+const publicDir = path.resolve(__dirname, 'public');
+app.use(express.static(publicDir));
 
-app.use('/admin', express.static(path.resolve(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-  res.redirect('/admin/');
+app.get(/^\/(?!api|healthz).*/, (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 const port = Number(process.env.PORT || 3000);
