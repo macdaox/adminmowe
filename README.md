@@ -28,10 +28,10 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 - `CLOUD_UPLOAD_RETURN_TEMP_URL`：是否在上传后生成临时预览链接（`1` 开启；默认不开启，避免超时）
 
 MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
-- `MYSQL_HOST`
-- `MYSQL_PORT`（可选，默认 3306）
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
+- `MYSQL_HOST`（或云托管提供的 `MYSQL_ADDRESS`，形如 `10.x.x.x:3306`）
+- `MYSQL_PORT`（可选，默认 3306；使用 `MYSQL_ADDRESS` 时可不填）
+- `MYSQL_USER`（或云托管提供的 `MYSQL_USERNAME`）
+- `MYSQL_PASSWORD`（部分环境可能叫 `MYSQL_PASS`）
 - `MYSQL_DATABASE`
 - `MYSQL_POOL_SIZE`（可选）
 
