@@ -6,7 +6,7 @@ const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
 const miniappAdmin = require('./lib/miniappAdmin');
-const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage } = require('./lib/cloudStorage');
+const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUrl } = require('./lib/cloudStorage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -295,6 +295,18 @@ app.get('/api/admin/meta', adminAuth, async (req, res) => {
     adminEmail: getAdminEmail(),
     storePath: hasMySQLConfig() ? null : require('./lib/store').STORE_PATH
   });
+});
+
+app.get('/api/admin/file-url', adminAuth, async (req, res) => {
+  try {
+    if (!hasCloudStorage()) return apiErr(res, 400, 'cloud_storage_disabled');
+    const fileId = String((req.query && (req.query.fileId || req.query.cloudId)) || '').trim();
+    if (!fileId) return apiErr(res, 400, 'file_id_required');
+    const url = await getTempFileUrl(fileId);
+    apiOk(res, { url });
+  } catch (e) {
+    apiErr(res, 500, 'temp_url_failed');
+  }
 });
 
 app.get('/api/admin/store', adminAuth, async (req, res) => {
