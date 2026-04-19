@@ -10,7 +10,7 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const RELEASE = 'cos-openapi-20260420-3';
+const RELEASE = 'cos-openapi-20260420-4';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -453,7 +453,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
     if (e && e.code === 'cos_credentials_timeout') return apiErr(res, 504, 'cos_credentials_timeout');
     if (e && e.code === 'cos_metaid_failed') return apiErr(res, 500, 'cos_metaid_failed');
     if (e && e.code === 'cos_upload_timeout') return apiErr(res, 504, 'cos_upload_timeout');
-    if (e && String(e.message || '').startsWith('openapi_')) return apiErr(res, 500, 'cos_openapi_failed');
+    if (e && String(e.code || '').startsWith('openapi_')) return apiErr(res, 500, String(e.code));
     apiErr(res, 500, 'upload_failed');
   }
 });
