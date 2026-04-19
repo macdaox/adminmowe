@@ -11,6 +11,22 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+process.on('unhandledRejection', (reason) => {
+  try {
+    console.error('unhandledRejection', reason && reason.stack ? reason.stack : reason);
+  } catch (_e) {
+    console.error('unhandledRejection');
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  try {
+    console.error('uncaughtException', err && err.stack ? err.stack : err);
+  } catch (_e) {
+    console.error('uncaughtException');
+  }
+});
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-token');
@@ -348,6 +364,7 @@ app.post('/api/admin/reset', adminAuth, async (req, res) => {
 });
 
 app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res) => {
+  const started = Date.now();
   const f = req.file;
   if (!f) return apiErr(res, 400, 'file_required');
   const mt = String(f.mimetype || '').toLowerCase();
@@ -355,13 +372,16 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
   try {
     if (hasCloudStorage()) {
       const r = await uploadImageToCloudStorage({ buffer: f.buffer, filename: f.originalname, mimetype: f.mimetype });
+      console.log('upload_ok', { mode: 'cloud', ms: Date.now() - started, key: r.key });
       apiOk(res, { key: r.key, cloudId: r.cloudId, url: r.tempUrl || '' });
       return;
     }
 
     const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname });
+    console.log('upload_ok', { mode: 'cos', ms: Date.now() - started, key: result.key });
     apiOk(res, { url: result.url, key: result.key, cloudId: null });
   } catch (e) {
+    console.error('upload_err', { ms: Date.now() - started, code: e && e.code ? e.code : null, message: e && e.message ? e.message : String(e) });
     if (e && e.code === 'cloud_env_not_configured') return apiErr(res, 500, 'cloud_env_not_configured');
     if (e && e.code === 'cloud_upload_failed') return apiErr(res, 500, 'cloud_upload_failed');
     if (e && e.code === 'cloud_upload_timeout') return apiErr(res, 504, 'cloud_upload_timeout');
