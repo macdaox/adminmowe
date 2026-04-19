@@ -4,13 +4,13 @@ const multer = require('multer');
 const { adminAuth, getAdminToken, getAdminEmail, verifyAdminLogin } = require('./lib/adminAuth');
 const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
-const { uploadImage, hasCOSConfig, getCredentials } = require('./lib/cos');
+const { uploadImage, hasCOSConfig, getCredentials, debugWxOpenApi } = require('./lib/cos');
 const miniappAdmin = require('./lib/miniappAdmin');
 const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUrl } = require('./lib/cloudStorage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const RELEASE = 'cos-openapi-20260420-1';
+const RELEASE = 'cos-openapi-20260420-2';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -371,6 +371,11 @@ app.get('/api/admin/file-url', adminAuth, async (req, res) => {
     apiErr(res, 500, 'temp_url_failed');
   }
 });
+
+app.get('/api/admin/openapi-debug', adminAuth, wrap(async (req, res) => {
+  const r = await debugWxOpenApi(['/_/cos/sts', '/_/cos/metaid/encode']);
+  apiOk(res, r);
+}));
 
 app.get('/api/admin/store', adminAuth, wrap(async (req, res) => {
   const store = await contentStore.getStore();
