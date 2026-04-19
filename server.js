@@ -10,7 +10,7 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const RELEASE = 'cos-openapi-20260420-2';
+const RELEASE = 'cos-openapi-20260420-3';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
