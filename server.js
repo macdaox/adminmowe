@@ -10,6 +10,7 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const RELEASE = '31105db+meta-timeout';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -45,12 +46,32 @@ app.get('/healthz', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/public/version', (req, res) => {
+  res.json({ ok: true, release: RELEASE });
+});
+
 function apiOk(res, data) {
   res.json({ ok: true, data });
 }
 
 function apiErr(res, status, message) {
   res.status(status).json({ ok: false, message: message || 'Request failed' });
+}
+
+function withTimeout(promise, ms, code) {
+  const timeoutMs = Number(ms);
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      const t = setTimeout(() => {
+        const err = new Error(code || 'timeout');
+        err.code = code || 'timeout';
+        reject(err);
+      }, timeoutMs);
+      t.unref && t.unref();
+    })
+  ]);
 }
 
 app.post('/api/admin/login', async (req, res) => {
@@ -306,7 +327,7 @@ app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
   let storeInitOk = true;
   let storeInitError = null;
   try {
-    await contentStore.init();
+    await withTimeout(contentStore.init(), 4000, 'store_init_timeout');
   } catch (e) {
     storeInitOk = false;
     storeInitError = e && e.code ? String(e.code) : (e && e.message ? String(e.message) : 'init_failed');
@@ -315,6 +336,7 @@ app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
   const cosCreds = hasCOSConfig() ? await getCredentials() : null;
   const mysqlConfigured = hasMySQLConfig();
   apiOk(res, {
+    release: RELEASE,
     mode: mysqlConfigured ? (storeInitOk ? 'mysql' : 'mysql_error') : 'file',
     mysqlConfigured,
     storeInitOk,
