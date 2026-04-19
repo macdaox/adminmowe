@@ -425,9 +425,17 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
     console.log('upload_ok', { mode: 'cos', ms: Date.now() - started, key: result.key });
     apiOk(res, { url: result.url, key: result.key, cloudId: null });
   } catch (e) {
-    console.error('upload_err', { ms: Date.now() - started, code: e && e.code ? e.code : null, message: e && e.message ? e.message : String(e) });
+    console.error('upload_err', {
+      ms: Date.now() - started,
+      code: e && e.code ? e.code : null,
+      detailCode: e && e.detailCode ? e.detailCode : null,
+      message: e && e.message ? e.message : String(e)
+    });
     if (e && e.code === 'cloud_env_not_configured') return apiErr(res, 500, 'cloud_env_not_configured');
-    if (e && e.code === 'cloud_upload_failed') return apiErr(res, 500, 'cloud_upload_failed');
+    if (e && e.code === 'cloud_upload_failed') {
+      const suffix = e && e.detailCode ? `:${String(e.detailCode)}` : '';
+      return apiErr(res, 500, `cloud_upload_failed${suffix}`);
+    }
     if (e && e.code === 'cloud_upload_timeout') return apiErr(res, 504, 'cloud_upload_timeout');
     if (e && e.code === 'cos_not_configured') return apiErr(res, 500, 'cos_not_configured');
     if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
