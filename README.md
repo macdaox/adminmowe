@@ -42,6 +42,7 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 - `COS_CREDENTIALS_TIMEOUT_MS`（可选：获取临时凭证超时，默认 8000）
 - `WXCLOUDRUN_OPENAPI_BASE`（可选：云调用基地址，默认 `http://api.weixin.qq.com`）
 - `WXCLOUDRUN_OPENAPI_TIMEOUT_MS`（可选：云调用接口超时，默认 2000）
+- `WXCLOUDRUN_DISABLE_METADATA_CREDENTIALS`（可选：是否禁用 metadata 获取凭证，默认 `1` 禁用；云托管推荐保持禁用）
 
 凭证说明：
 - 微信云托管运行环境通常会注入临时凭证，后端会自动从运行环境获取（无需手动配置 SecretId/SecretKey）
