@@ -10,7 +10,7 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const RELEASE = 'cos-debug-20260419-1';
+const RELEASE = 'cos-openapi-20260420-1';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -424,7 +424,8 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
       return;
     }
 
-    const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname });
+    const openid = req.header('x-wx-openid') || req.header('x-wx-openid'.toUpperCase()) || 'admin';
+    const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname, openid });
     console.log('upload_ok', { mode: 'cos', ms: Date.now() - started, key: result.key });
     apiOk(res, { url: result.url, key: result.key, cloudId: null });
   } catch (e) {
@@ -445,6 +446,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
     if (e && e.code === 'cos_region_invalid') return apiErr(res, 400, 'cos_region_invalid');
     if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
     if (e && e.code === 'cos_credentials_timeout') return apiErr(res, 504, 'cos_credentials_timeout');
+    if (e && e.code === 'cos_metaid_failed') return apiErr(res, 500, 'cos_metaid_failed');
     if (e && e.code === 'cos_upload_timeout') return apiErr(res, 504, 'cos_upload_timeout');
     if (e && String(e.message || '').startsWith('openapi_')) return apiErr(res, 500, 'cos_openapi_failed');
     apiErr(res, 500, 'upload_failed');
