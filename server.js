@@ -10,7 +10,7 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const RELEASE = '31105db+meta-timeout';
+const RELEASE = 'cos-debug-20260419-1';
 
 function wrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -334,11 +334,13 @@ app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
   }
 
   let cosCreds = null;
+  let cosCredentialError = null;
   if (hasCOSConfig()) {
     try {
       cosCreds = await withTimeout(getCredentials(), 800, 'cos_credentials_timeout');
-    } catch (_e) {
+    } catch (e) {
       cosCreds = null;
+      cosCredentialError = e && e.code ? String(e.code) : (e && e.message ? String(e.message) : 'cos_credentials_failed');
     }
   }
   const mysqlConfigured = hasMySQLConfig();
@@ -350,6 +352,7 @@ app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
     storeInitError,
     cosConfigured: hasCOSConfig(),
     cosCredentialSource: cosCreds ? cosCreds.source : null,
+    cosCredentialError,
     cloudStorageEnabled: hasCloudStorage(),
     cloudEnvId: getCloudEnvId() || null,
     adminEmail: getAdminEmail(),
@@ -441,6 +444,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
     if (e && e.code === 'cos_bucket_invalid') return apiErr(res, 400, 'cos_bucket_invalid');
     if (e && e.code === 'cos_region_invalid') return apiErr(res, 400, 'cos_region_invalid');
     if (e && e.code === 'cos_credentials_unavailable') return apiErr(res, 500, 'cos_credentials_unavailable');
+    if (e && e.code === 'cos_credentials_timeout') return apiErr(res, 504, 'cos_credentials_timeout');
     if (e && e.code === 'cos_upload_timeout') return apiErr(res, 504, 'cos_upload_timeout');
     if (e && String(e.message || '').startsWith('openapi_')) return apiErr(res, 500, 'cos_openapi_failed');
     apiErr(res, 500, 'upload_failed');
