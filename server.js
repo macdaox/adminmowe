@@ -11,6 +11,10 @@ const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUr
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+function wrap(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
+
 process.on('unhandledRejection', (reason) => {
   try {
     console.error('unhandledRejection', reason && reason.stack ? reason.stack : reason);
@@ -167,12 +171,12 @@ function pickHotCases(store) {
   }));
 }
 
-app.get('/api/public/site', async (req, res) => {
+app.get('/api/public/site', wrap(async (req, res) => {
   const site = await contentStore.getSection('site');
   res.json(site || {});
-});
+}));
 
-app.get('/api/public/home', async (req, res) => {
+app.get('/api/public/home', wrap(async (req, res) => {
   const store = await contentStore.getStore();
   const home = store.home || {};
   res.json({
@@ -212,9 +216,9 @@ app.get('/api/public/home', async (req, res) => {
       slogan: (store.site && store.site.slogan) || ''
     }
   });
-});
+}));
 
-app.get('/api/public/cases', async (req, res) => {
+app.get('/api/public/cases', wrap(async (req, res) => {
   const style = String(req.query.style || '').trim();
   const cases = await contentStore.getSection('cases');
   const filters = (cases && cases.filters) || [];
@@ -235,9 +239,9 @@ app.get('/api/public/cases', async (req, res) => {
       image: c.coverUrl || ''
     }))
   });
-});
+}));
 
-app.get('/api/public/designers', async (req, res) => {
+app.get('/api/public/designers', wrap(async (req, res) => {
   const designers = await contentStore.getSection('designers');
   const ds = designers || {};
   res.json({
@@ -254,17 +258,17 @@ app.get('/api/public/designers', async (req, res) => {
       avatar: d.avatarUrl || ''
     }))
   });
-});
+}));
 
-app.get('/api/public/about', async (req, res) => {
+app.get('/api/public/about', wrap(async (req, res) => {
   const about = await contentStore.getSection('about');
   res.json(about || {});
-});
+}));
 
-app.get('/api/public/contact', async (req, res) => {
+app.get('/api/public/contact', wrap(async (req, res) => {
   const contact = await contentStore.getSection('contact');
   res.json(contact || {});
-});
+}));
 
 function isValidPhone(phone) {
   const v = String(phone || '').trim();
@@ -272,7 +276,7 @@ function isValidPhone(phone) {
   return /^[0-9+\- ]{6,20}$/.test(v);
 }
 
-app.post('/api/public/appointments', async (req, res) => {
+app.post('/api/public/appointments', wrap(async (req, res) => {
   const body = req.body || {};
   const name = String(body.name || '').trim();
   const phone = String(body.phone || '').trim();
@@ -296,22 +300,33 @@ app.post('/api/public/appointments', async (req, res) => {
   await contentStore.createAppointment(appointment);
 
   res.json({ ok: true, id: appointment.id });
-});
+}));
 
-app.get('/api/admin/meta', adminAuth, async (req, res) => {
-  await contentStore.init();
+app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
+  let storeInitOk = true;
+  let storeInitError = null;
+  try {
+    await contentStore.init();
+  } catch (e) {
+    storeInitOk = false;
+    storeInitError = e && e.code ? String(e.code) : (e && e.message ? String(e.message) : 'init_failed');
+  }
+
   const cosCreds = hasCOSConfig() ? await getCredentials() : null;
+  const mysqlConfigured = hasMySQLConfig();
   apiOk(res, {
-    mode: hasMySQLConfig() ? 'mysql' : 'file',
-    mysqlConfigured: hasMySQLConfig(),
+    mode: mysqlConfigured ? (storeInitOk ? 'mysql' : 'mysql_error') : 'file',
+    mysqlConfigured,
+    storeInitOk,
+    storeInitError,
     cosConfigured: hasCOSConfig(),
     cosCredentialSource: cosCreds ? cosCreds.source : null,
     cloudStorageEnabled: hasCloudStorage(),
     cloudEnvId: getCloudEnvId() || null,
     adminEmail: getAdminEmail(),
-    storePath: hasMySQLConfig() ? null : require('./lib/store').STORE_PATH
+    storePath: mysqlConfigured ? null : require('./lib/store').STORE_PATH
   });
-});
+}));
 
 app.get('/api/admin/file-url', adminAuth, async (req, res) => {
   try {
@@ -325,27 +340,27 @@ app.get('/api/admin/file-url', adminAuth, async (req, res) => {
   }
 });
 
-app.get('/api/admin/store', adminAuth, async (req, res) => {
+app.get('/api/admin/store', adminAuth, wrap(async (req, res) => {
   const store = await contentStore.getStore();
   res.json(store);
-});
+}));
 
-app.put('/api/admin/store', adminAuth, async (req, res) => {
+app.put('/api/admin/store', adminAuth, wrap(async (req, res) => {
   const next = req.body;
   if (!next || typeof next !== 'object') return res.status(400).json({ error: 'invalid_body' });
   await contentStore.replaceStore(next);
   const store = await contentStore.getStore();
   res.json(store);
-});
+}));
 
-app.get('/api/admin/section/:key', adminAuth, async (req, res) => {
+app.get('/api/admin/section/:key', adminAuth, wrap(async (req, res) => {
   const key = String(req.params.key || '').trim();
   const value = await contentStore.getSection(key);
   if (value === null) return res.status(404).json({ error: 'not_found' });
   res.json(value);
-});
+}));
 
-app.put('/api/admin/section/:key', adminAuth, async (req, res) => {
+app.put('/api/admin/section/:key', adminAuth, wrap(async (req, res) => {
   const key = String(req.params.key || '').trim();
   const value = req.body;
   if (!key) return res.status(400).json({ error: 'invalid_key' });
@@ -355,13 +370,13 @@ app.put('/api/admin/section/:key', adminAuth, async (req, res) => {
   if (!ok) return res.status(400).json({ error: 'read_only' });
   const saved = await contentStore.getSection(key);
   res.json(saved);
-});
+}));
 
-app.post('/api/admin/reset', adminAuth, async (req, res) => {
+app.post('/api/admin/reset', adminAuth, wrap(async (req, res) => {
   await contentStore.reset();
   const store = await contentStore.getStore();
   res.json({ ok: true, store });
-});
+}));
 
 app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res) => {
   const started = Date.now();
@@ -398,6 +413,16 @@ app.use(express.static(publicDir));
 
 app.get(/^\/(?!api|healthz).*/, (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.use((err, req, res, next) => {
+  try {
+    console.error('route_error', err && err.stack ? err.stack : err);
+  } catch (_e) {
+    console.error('route_error');
+  }
+  if (res.headersSent) return next(err);
+  apiErr(res, 500, 'server_error');
 });
 
 const port = Number(process.env.PORT || 3000);
