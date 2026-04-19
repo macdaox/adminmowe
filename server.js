@@ -333,7 +333,14 @@ app.get('/api/admin/meta', adminAuth, wrap(async (req, res) => {
     storeInitError = e && e.code ? String(e.code) : (e && e.message ? String(e.message) : 'init_failed');
   }
 
-  const cosCreds = hasCOSConfig() ? await getCredentials() : null;
+  let cosCreds = null;
+  if (hasCOSConfig()) {
+    try {
+      cosCreds = await withTimeout(getCredentials(), 800, 'cos_credentials_timeout');
+    } catch (_e) {
+      cosCreds = null;
+    }
+  }
   const mysqlConfigured = hasMySQLConfig();
   apiOk(res, {
     release: RELEASE,
