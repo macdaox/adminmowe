@@ -223,11 +223,21 @@ app.put('/api/admin/settings', adminAuth, async (req, res) => {
 
 app.get('/api/admin/leads', adminAuth, async (req, res) => {
   try {
-    const { q, limit, offset } = req.query || {};
-    const r = await miniappAdmin.listLeads(q, limit, offset);
+    const { q, limit, offset, status } = req.query || {};
+    const r = await miniappAdmin.listLeads(q, limit, offset, status);
     apiOk(res, r);
   } catch (e) {
     apiErr(res, 500, 'leads_failed');
+  }
+});
+
+app.put('/api/admin/leads/:id/status', adminAuth, async (req, res) => {
+  try {
+    const item = await miniappAdmin.updateLeadStatus(req.params.id, (req.body || {}).status);
+    if (!item) return apiErr(res, 404, 'not_found');
+    apiOk(res, item);
+  } catch (e) {
+    apiErr(res, 400, 'lead_status_failed');
   }
 });
 
@@ -500,6 +510,8 @@ app.post('/api/public/appointments', wrap(async (req, res) => {
     community,
     area,
     demand,
+    status: 'pending',
+    contactedAt: '',
     createdAt: new Date().toISOString()
   };
 
