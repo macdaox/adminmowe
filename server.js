@@ -293,6 +293,26 @@ app.get('/api/public/cases', wrap(async (req, res) => {
   });
 }));
 
+app.get('/api/public/cases/:id', wrap(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const cases = await contentStore.getSection('cases');
+  const item = ((cases && cases.items) || []).find((c) => String(c && c.id) === id);
+  if (!item) return res.status(404).json({ error: 'not_found' });
+  res.json({
+    id: item.id,
+    title: item.title || '',
+    style: item.style || '',
+    area: item.area || '',
+    room: item.room || '',
+    desc: item.desc || '',
+    image: item.coverUrl || '',
+    coverUrl: item.coverUrl || '',
+    highlights: Array.isArray(item.highlights) ? item.highlights : [],
+    gallery: Array.isArray(item.gallery) ? item.gallery : [],
+    details: item.details || ''
+  });
+}));
+
 app.get('/api/public/designers', wrap(async (req, res) => {
   const designers = await contentStore.getSection('designers');
   const ds = designers || {};
