@@ -7,6 +7,7 @@ const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials, debugWxOpenApi } = require('./lib/cos');
 const miniappAdmin = require('./lib/miniappAdmin');
 const { hasCloudStorage, getCloudEnvId, uploadImageToCloudStorage, getTempFileUrl } = require('./lib/cloudStorage');
+const wecomRobot = require('./lib/wecomRobot');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -121,6 +122,36 @@ app.get('/api/admin/leads', adminAuth, async (req, res) => {
     apiOk(res, r);
   } catch (e) {
     apiErr(res, 500, 'leads_failed');
+  }
+});
+
+app.get('/api/admin/lead-notify-config', adminAuth, async (req, res) => {
+  try {
+    const config = await wecomRobot.getConfig();
+    apiOk(res, wecomRobot.publicConfig(config));
+  } catch (e) {
+    apiErr(res, 500, 'lead_notify_config_failed');
+  }
+});
+
+app.put('/api/admin/lead-notify-config', adminAuth, async (req, res) => {
+  try {
+    const config = await wecomRobot.saveConfig(req.body || {});
+    apiOk(res, wecomRobot.publicConfig(config));
+  } catch (e) {
+    if (e && e.code === 'wecom_webhook_invalid') return apiErr(res, 400, 'wecom_webhook_invalid');
+    apiErr(res, 500, 'lead_notify_config_failed');
+  }
+});
+
+app.post('/api/admin/lead-notify-test', adminAuth, async (req, res) => {
+  try {
+    await wecomRobot.sendTest();
+    apiOk(res, {});
+  } catch (e) {
+    if (e && e.code === 'wecom_robot_disabled') return apiErr(res, 400, 'wecom_robot_disabled');
+    if (e && e.code === 'wecom_webhook_required') return apiErr(res, 400, 'wecom_webhook_required');
+    apiErr(res, 500, e && e.code ? String(e.code) : 'lead_notify_test_failed');
   }
 });
 
@@ -319,6 +350,9 @@ app.post('/api/public/appointments', wrap(async (req, res) => {
   };
 
   await contentStore.createAppointment(appointment);
+  wecomRobot.notifyAppointment(appointment).catch((e) => {
+    console.error('wecom_notify_unhandled', e && e.message ? e.message : e);
+  });
 
   res.json({ ok: true, id: appointment.id });
 }));
