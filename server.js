@@ -373,7 +373,7 @@ app.get('/api/admin/file-url', adminAuth, async (req, res) => {
 });
 
 app.get('/api/admin/openapi-debug', adminAuth, wrap(async (req, res) => {
-  const r = await debugWxOpenApi(['/_/cos/sts', '/_/cos/metaid/encode']);
+  const r = await debugWxOpenApi(['/_/cos/getauth', '/_/cos/sts', '/_/cos/metaid/encode']);
   apiOk(res, r);
 }));
 
