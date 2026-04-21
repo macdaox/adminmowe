@@ -20,8 +20,8 @@ ADMIN_TOKEN=dev-admin-token PORT=3000 npm run dev
 
 - `PORT`：监听端口（本地可用 3000；云托管建议与服务端口一致，通常为 80）
 - `ADMIN_TOKEN`：管理接口 Token（用于 Bearer Token 鉴权），不配置时默认 `dev-admin-token`
-- `ADMIN_EMAIL`：后台登录邮箱（默认 `admin@example.com`）
-- `ADMIN_PASSWORD`：后台登录密码（生产环境必须配置；本地开发默认 `admin123`）
+- `ADMIN_EMAIL`：后台登录邮箱（默认 `admin@example.com`；数据库内没有管理员账号时作为兜底账号）
+- `ADMIN_PASSWORD`：后台登录密码（生产环境首次使用前必须配置；数据库内没有管理员账号时作为兜底密码，本地开发默认 `admin123`）
 - `STORE_PATH`：文件存储模式下的数据文件路径（默认 `admin/data/store.json`）
 - `CLOUD_ENV_ID`：云开发环境 ID（用于后台上传图片走“云托管对象存储/云存储 SDK”时需要；建议设置为你的环境 ID）
 - `CLOUD_UPLOAD_TIMEOUT_MS`：云存储上传超时（毫秒，默认 15000）
@@ -67,9 +67,11 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 鉴权方式：
 - 登录：`POST /api/admin/login`（body：`{ email, password }`）
 - 后续请求：`Authorization: Bearer <token>`（token 为登录返回值）
+- 管理员账号优先读取 MySQL `admin_users` 表；首次没有数据库账号时读取 `ADMIN_EMAIL` / `ADMIN_PASSWORD`，在后台“基础设置 - 管理员账号”保存后会写入 MySQL，后续不再读取环境变量账号密码。
 
 后台常用接口（均为 Bearer Token 鉴权）：
 - `GET /api/admin/me`
+- `GET/PUT /api/admin/account`
 - `GET /api/admin/stats`
 - `GET/PUT /api/admin/settings`
 - `GET /api/admin/leads`

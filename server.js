@@ -1,7 +1,14 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const { adminAuth, getAdminToken, getAdminEmail, verifyAdminLogin } = require('./lib/adminAuth');
+const {
+  adminAuth,
+  getAdminToken,
+  getEffectiveAdminEmail,
+  getAdminAccountStatus,
+  updateAdminAccount,
+  verifyAdminLogin
+} = require('./lib/adminAuth');
 const contentStore = require('./lib/contentStore');
 const { hasMySQLConfig } = require('./lib/mysql');
 const { uploadImage, hasCOSConfig, getCredentials, debugWxOpenApi } = require('./lib/cos');
@@ -79,13 +86,40 @@ app.post('/api/admin/login', async (req, res) => {
   const body = req.body || {};
   const email = String(body.email || body.username || '').trim();
   const password = String(body.password || '');
-  const r = verifyAdminLogin(email, password);
+  const r = await verifyAdminLogin(email, password);
   if (!r.ok) return apiErr(res, 401, r.reason || 'invalid_credentials');
-  apiOk(res, { token: getAdminToken(), email: getAdminEmail() });
+  apiOk(res, { token: getAdminToken(), email: r.email || email });
 });
 
 app.get('/api/admin/me', adminAuth, async (req, res) => {
-  apiOk(res, { email: getAdminEmail() });
+  apiOk(res, { email: await getEffectiveAdminEmail() });
+});
+
+app.get('/api/admin/account', adminAuth, async (req, res) => {
+  try {
+    const account = await getAdminAccountStatus();
+    apiOk(res, account);
+  } catch (e) {
+    apiErr(res, 500, 'admin_account_failed');
+  }
+});
+
+app.put('/api/admin/account', adminAuth, async (req, res) => {
+  try {
+    const account = await updateAdminAccount(req.body || {});
+    apiOk(res, account);
+  } catch (e) {
+    const code = e && e.code ? String(e.code) : 'admin_account_failed';
+    if (
+      code === 'mysql_not_configured' ||
+      code === 'admin_email_invalid' ||
+      code === 'admin_password_too_short' ||
+      code === 'current_password_invalid'
+    ) {
+      return apiErr(res, 400, code);
+    }
+    apiErr(res, 500, code);
+  }
 });
 
 app.get('/api/admin/stats', adminAuth, async (req, res) => {
