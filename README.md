@@ -39,6 +39,7 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 - `COS_BUCKET`
 - `COS_REGION`
 - `COS_PUBLIC_BASE_URL`（可选：自定义公网访问前缀，例如 CDN 域名或存储桶自定义域名）
+- `COS_FILE_ENV_ID`（可选：COS 上传后返回 `cloud://` File ID 使用的云环境 ID；不填时会尝试从桶名推断）
 - `COS_CREDENTIALS_TIMEOUT_MS`（可选：获取临时凭证超时，默认 8000）
 - `WXCLOUDRUN_OPENAPI_BASE`（可选：云调用基地址，默认 `http://api.weixin.qq.com`）
 - `WXCLOUDRUN_OPENAPI_TIMEOUT_MS`（可选：云调用接口超时，默认 2000）

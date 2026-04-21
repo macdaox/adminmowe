@@ -432,7 +432,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
     const openid = req.header('x-wx-openid') || req.header('x-wx-openid'.toUpperCase()) || 'admin';
     const result = await uploadImage({ buffer: f.buffer, contentType: f.mimetype, filename: f.originalname, openid });
     console.log('upload_ok', { mode: 'cos', ms: Date.now() - started, key: result.key });
-    apiOk(res, { url: result.url, key: result.key, cloudId: null });
+    apiOk(res, { url: result.url, key: result.key, cloudId: result.cloudId || null });
   } catch (e) {
     console.error('upload_err', {
       ms: Date.now() - started,
