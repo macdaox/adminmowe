@@ -206,7 +206,7 @@ function handleArrayEntity({ entity, sectionKey, arrayPath, qFields, idPrefix })
   { entity: 'home-services', sectionKey: 'home', arrayPath: 'services', qFields: ['id', 'name', 'desc'], idPrefix: 's' },
   { entity: 'home-advantages', sectionKey: 'home', arrayPath: 'advantages', qFields: ['id', 'title', 'desc'], idPrefix: 'a' },
   { entity: 'cases', sectionKey: 'cases', arrayPath: 'items', qFields: ['id', 'title', 'style', 'area', 'room', 'desc'], idPrefix: 'c' },
-  { entity: 'designers', sectionKey: 'designers', arrayPath: 'items', qFields: ['id', 'name', 'level', 'desc'], idPrefix: 'd' },
+  { entity: 'designers', sectionKey: 'designers', arrayPath: 'items', qFields: ['id', 'name', 'level', 'desc', 'philosophy', 'tags', 'specialties', 'experience', 'awards', 'representativeCases'], idPrefix: 'd' },
   { entity: 'about-infos', sectionKey: 'about', arrayPath: 'infos', qFields: ['title', 'desc', 'icon'], idPrefix: 'ai' },
   { entity: 'about-history', sectionKey: 'about', arrayPath: 'history', qFields: ['year', 'event'], idPrefix: 'ah' }
 ].forEach(handleArrayEntity);
@@ -327,7 +327,12 @@ app.get('/api/public/designers', wrap(async (req, res) => {
       cases: d.cases,
       years: d.years,
       like: d.like,
-      avatar: d.avatarUrl || ''
+      avatar: d.avatarUrl || '',
+      specialties: Array.isArray(d.specialties) ? d.specialties : [],
+      philosophy: d.philosophy || '',
+      experience: Array.isArray(d.experience) ? d.experience : [],
+      awards: Array.isArray(d.awards) ? d.awards : [],
+      representativeCases: Array.isArray(d.representativeCases) ? d.representativeCases : []
     }))
   });
 }));
