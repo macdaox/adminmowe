@@ -575,9 +575,18 @@ app.post('/api/admin/upload', adminAuth, upload.single('file'), async (req, res)
 });
 
 const publicDir = path.resolve(__dirname, 'public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 app.get(/^\/(?!api|healthz).*/, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
