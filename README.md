@@ -67,11 +67,12 @@ MySQL（云托管 MySQL，配置后自动切换为 MySQL 存储）：
 鉴权方式：
 - 登录：`POST /api/admin/login`（body：`{ email, password }`）
 - 后续请求：`Authorization: Bearer <token>`（token 为登录返回值）
-- 管理员账号优先读取 MySQL `admin_users` 表；首次没有数据库账号时读取 `ADMIN_EMAIL` / `ADMIN_PASSWORD`，在后台“基础设置 - 管理员账号”保存后会写入 MySQL，后续不再读取环境变量账号密码。
+- 管理员账号优先读取 MySQL `admin_users` 表，支持多个管理员账号；首次没有数据库账号时读取 `ADMIN_EMAIL` / `ADMIN_PASSWORD`，在后台“基础设置 - 管理员账号”新增第一个账号后会写入 MySQL，后续不再读取环境变量账号密码。
 
 后台常用接口（均为 Bearer Token 鉴权）：
 - `GET /api/admin/me`
 - `GET/PUT /api/admin/account`
+- `POST/PUT/DELETE /api/admin/accounts`
 - `GET /api/admin/stats`
 - `GET/PUT /api/admin/settings`
 - `GET /api/admin/leads`
