@@ -3,7 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const {
   adminAuth,
-  getAdminToken,
+  createAdminSessionToken,
   getEffectiveAdminEmail,
   getAdminAccountStatus,
   createAdminAccount,
@@ -91,16 +91,23 @@ app.post('/api/admin/login', async (req, res) => {
   const password = String(body.password || '');
   const r = await verifyAdminLogin(email, password);
   if (!r.ok) return apiErr(res, 401, r.reason || 'invalid_credentials');
-  apiOk(res, { token: getAdminToken(), email: r.email || email });
+  apiOk(res, {
+    token: createAdminSessionToken(r),
+    email: r.email || email,
+    role: r.role || 'admin'
+  });
 });
 
 app.get('/api/admin/me', adminAuth, async (req, res) => {
-  apiOk(res, { email: await getEffectiveAdminEmail() });
+  apiOk(res, {
+    email: req.admin && req.admin.email ? req.admin.email : await getEffectiveAdminEmail(),
+    role: req.admin && req.admin.role ? req.admin.role : 'admin'
+  });
 });
 
 app.get('/api/admin/account', adminAuth, async (req, res) => {
   try {
-    const account = await getAdminAccountStatus();
+    const account = await getAdminAccountStatus(req.admin);
     apiOk(res, account);
   } catch (e) {
     apiErr(res, 500, 'admin_account_failed');
@@ -109,7 +116,7 @@ app.get('/api/admin/account', adminAuth, async (req, res) => {
 
 app.put('/api/admin/account', adminAuth, async (req, res) => {
   try {
-    const account = await updateAdminAccount(req.body || {});
+    const account = await updateAdminAccount(req.body || {}, req.admin);
     apiOk(res, account);
   } catch (e) {
     const code = e && e.code ? String(e.code) : 'admin_account_failed';
@@ -127,26 +134,7 @@ app.put('/api/admin/account', adminAuth, async (req, res) => {
 
 app.post('/api/admin/accounts', adminAuth, async (req, res) => {
   try {
-    const account = await createAdminAccount(req.body || {});
-    apiOk(res, account);
-  } catch (e) {
-    const code = e && e.code ? String(e.code) : 'admin_account_failed';
-    if (
-      code === 'mysql_not_configured' ||
-      code === 'admin_email_invalid' ||
-      code === 'admin_password_too_short' ||
-      code === 'current_password_invalid' ||
-      code === 'admin_email_exists'
-    ) {
-      return apiErr(res, 400, code);
-    }
-    apiErr(res, 500, code);
-  }
-});
-
-app.put('/api/admin/accounts/:id', adminAuth, async (req, res) => {
-  try {
-    const account = await updateAdminAccountById(req.params.id, req.body || {});
+    const account = await createAdminAccount(req.body || {}, req.admin);
     apiOk(res, account);
   } catch (e) {
     const code = e && e.code ? String(e.code) : 'admin_account_failed';
@@ -156,7 +144,29 @@ app.put('/api/admin/accounts/:id', adminAuth, async (req, res) => {
       code === 'admin_password_too_short' ||
       code === 'current_password_invalid' ||
       code === 'admin_email_exists' ||
-      code === 'admin_user_not_found'
+      code === 'permission_denied'
+    ) {
+      return apiErr(res, 400, code);
+    }
+    apiErr(res, 500, code);
+  }
+});
+
+app.put('/api/admin/accounts/:id', adminAuth, async (req, res) => {
+  try {
+    const account = await updateAdminAccountById(req.params.id, req.body || {}, req.admin);
+    apiOk(res, account);
+  } catch (e) {
+    const code = e && e.code ? String(e.code) : 'admin_account_failed';
+    if (
+      code === 'mysql_not_configured' ||
+      code === 'admin_email_invalid' ||
+      code === 'admin_password_too_short' ||
+      code === 'current_password_invalid' ||
+      code === 'admin_email_exists' ||
+      code === 'admin_user_not_found' ||
+      code === 'permission_denied' ||
+      code === 'last_super_admin'
     ) {
       return apiErr(res, 400, code);
     }
@@ -166,7 +176,7 @@ app.put('/api/admin/accounts/:id', adminAuth, async (req, res) => {
 
 app.delete('/api/admin/accounts/:id', adminAuth, async (req, res) => {
   try {
-    const account = await deleteAdminAccount(req.params.id, req.body || {});
+    const account = await deleteAdminAccount(req.params.id, req.body || {}, req.admin);
     apiOk(res, account);
   } catch (e) {
     const code = e && e.code ? String(e.code) : 'admin_account_failed';
@@ -174,7 +184,9 @@ app.delete('/api/admin/accounts/:id', adminAuth, async (req, res) => {
       code === 'mysql_not_configured' ||
       code === 'current_password_invalid' ||
       code === 'admin_user_not_found' ||
-      code === 'last_admin_user'
+      code === 'last_admin_user' ||
+      code === 'last_super_admin' ||
+      code === 'permission_denied'
     ) {
       return apiErr(res, 400, code);
     }
