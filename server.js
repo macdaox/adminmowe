@@ -332,6 +332,29 @@ app.get('/api/public/designers', wrap(async (req, res) => {
   });
 }));
 
+app.get('/api/public/designers/:id', wrap(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const designers = await contentStore.getSection('designers');
+  const item = (((designers || {}).items) || []).find((d) => String(d && d.id) === id);
+  if (!item) return res.status(404).json({ error: 'not_found' });
+  res.json({
+    id: item.id,
+    name: item.name || '',
+    level: item.level || '',
+    tags: item.tags || [],
+    desc: item.desc || '',
+    cases: item.cases || 0,
+    years: item.years || 0,
+    like: item.like || 0,
+    avatar: item.avatarUrl || '',
+    specialties: Array.isArray(item.specialties) ? item.specialties : (item.tags || []),
+    philosophy: item.philosophy || '',
+    experience: Array.isArray(item.experience) ? item.experience : [],
+    awards: Array.isArray(item.awards) ? item.awards : [],
+    representativeCases: Array.isArray(item.representativeCases) ? item.representativeCases : []
+  });
+}));
+
 app.get('/api/public/about', wrap(async (req, res) => {
   const about = await contentStore.getSection('about');
   res.json(about || {});
